@@ -1,0 +1,85 @@
+body{
+
+    font-family:sans-serif;
+
+    text-align:center;
+
+    margin-top:100px;
+
+}
+
+
+/* タイトル */
+
+h1{
+
+    font-size:40px;
+
+}
+
+
+/* 説明文 */
+
+p{
+
+    font-size:32px;
+
+}
+
+
+/* 問題文 */
+
+#stimulus{
+
+    font-size:100px;
+
+    font-weight:bold;
+
+}
+
+
+/* 課題の説明 */
+
+#taskLabel{
+
+    font-size:40px;
+
+}
+
+
+/* 待機画面 */
+
+#waitLabel{
+
+    font-size:70px;
+
+    font-weight:bold;
+
+}
+
+
+/* YES / NOボタン */
+
+#yesButton,
+#noButton{
+
+    font-size:40px;
+
+    padding:22px 55px;
+
+    margin-top:30px;
+
+}
+
+
+/* その他のボタン */
+
+button{
+
+    font-size:36px;
+
+    padding:20px 50px;
+
+    margin-top:30px;
+
+}

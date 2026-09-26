@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Task Switching Experiment</title>
+
+    <!-- CSSを読み込む -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- 開始画面 -->
+    <div id="startScreen">
+        <h1>Task Switching課題</h1>
+
+        <p>数字 → YES = 奇数　NO = 偶数</p>
+        <p>文字 → YES = 母音　NO = 子音</p>
+
+        <button id="startButton">開始</button>
+    </div>
+
+    <!-- 問題画面 -->
+    <div id="questionScreen" style="display:none;">
+
+        <h2 id="taskLabel">奇数・偶数</h2>
+
+        <h1 id="stimulus">7</h1>
+
+        <button id="yesButton">YES</button>
+        <button id="noButton">NO</button>
+
+    </div>
+
+    <!-- 待機画面 -->
+<div id="waitScreen" style="display:none;">
+
+    <h1 id="waitLabel">お待ちください</h1>
+
+    <button id="downloadButton">
+        結果保存
+    </button>
+
+</div>
+
+    <script src="main.js"></script>
+
+</body>
+
+</html>
