@@ -11,15 +11,38 @@
 
 <body>
 
-    <!-- 開始画面 -->
-    <div id="startScreen">
+    <!-- 参加者番号入力画面 -->
+    <div id="participantScreen">
+
+        <h1>Task Switching課題</h1>
+
+        <p>参加者番号を入力してください。</p>
+
+        <input
+            type="text"
+            id="participantId"
+            placeholder="参加者番号"
+        >
+
+        <br>
+
+        <button id="participantNextButton">次へ</button>
+
+    </div>
+
+
+    <!-- 課題説明画面 -->
+    <div id="startScreen" style="display:none;">
+
         <h1>Task Switching課題</h1>
 
         <p>数字 → YES = 奇数　NO = 偶数</p>
         <p>文字 → YES = 母音　NO = 子音</p>
 
-        <button id="startButton">開始</button>
+        <button id="startButton">実験開始</button>
+
     </div>
+
 
     <!-- 問題画面 -->
     <div id="questionScreen" style="display:none;">
@@ -33,16 +56,26 @@
 
     </div>
 
+
     <!-- 待機画面 -->
-<div id="waitScreen" style="display:none;">
+    <div id="waitScreen" style="display:none;">
 
-    <h1 id="waitLabel">お待ちください</h1>
+        <h1 id="waitLabel">お待ちください</h1>
 
-    <button id="downloadButton">
-        結果保存
-    </button>
+    </div>
 
-</div>
+
+    <!-- 実験終了画面 -->
+    <div id="finishScreen" style="display:none;">
+
+        <h1>実験終了</h1>
+
+        <button id="downloadButton">
+            結果を保存
+        </button>
+
+    </div>
+
 
     <script src="main.js"></script>
 
