@@ -1,94 +1,211 @@
-body{
+/* =======================
+   全体
+======================= */
 
-    font-family:sans-serif;
-
-    text-align:center;
-
-    margin-top:100px;
-
+* {
+    box-sizing: border-box;
 }
 
+body {
+    margin: 0;
+    min-height: 100vh;
 
-/* タイトル */
+    display: flex;
+    justify-content: center;
+    align-items: center;
 
-h1{
+    font-family: "Yu Gothic", "Meiryo", sans-serif;
+    text-align: center;
 
-    font-size:40px;
-
+    background-color: #f3f5f8;
+    color: #263238;
 }
 
+/* =======================
+   各画面
+======================= */
 
-/* 説明文 */
+#participantScreen,
+#startScreen,
+#questionScreen,
+#waitScreen,
+#finishScreen {
+    width: min(90%, 900px);
+    padding: 45px 35px;
 
-p{
+    background-color: #ffffff;
+    border: 1px solid #e0e5eb;
+    border-radius: 16px;
 
-    font-size:32px;
-
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
 }
 
+/* =======================
+   タイトル
+======================= */
 
-/* 問題文 */
-
-#stimulus{
-
-    font-size:100px;
-
-    font-weight:bold;
-
+h1 {
+    font-size: 40px;
+    font-weight: 700;
+    margin: 0 0 30px;
 }
 
-
-/* 課題の説明 */
-
-#taskLabel{
-
-    font-size:40px;
-
+h2 {
+    font-size: 36px;
+    margin: 0 0 20px;
 }
 
+/* =======================
+   説明文
+======================= */
 
-/* 待機画面 */
-
-#waitLabel{
-
-    font-size:70px;
-
-    font-weight:bold;
-
+p {
+    font-size: 26px;
+    line-height: 1.8;
+    margin: 15px 0;
 }
 
-
-/* YES / NOボタン */
-
-#yesButton,
-#noButton{
-
-    font-size:40px;
-
-    padding:22px 55px;
-
-    margin-top:30px;
-
-}
-
-
-/* その他のボタン */
-
-button{
-
-    font-size:36px;
-
-    padding:20px 50px;
-
-    margin-top:30px;
-
-}
+/* =======================
+   参加者番号
+======================= */
 
 #participantId {
-    font-size: 36px;
-    width: 350px;
+    width: min(100%, 350px);
     height: 60px;
+
+    margin: 20px 0;
+    padding: 10px;
+
+    font-size: 30px;
     text-align: center;
-    margin: 15px;
-    box-sizing: border-box;
+
+    border: 2px solid #cbd5e1;
+    border-radius: 8px;
+    background-color: #ffffff;
+}
+
+#participantId:focus {
+    outline: 3px solid #bfdbfe;
+    border-color: #3976c5;
+}
+
+/* =======================
+   ボタン共通
+======================= */
+
+button {
+    min-width: 150px;
+    min-height: 65px;
+
+    padding: 15px 30px;
+    margin: 12px;
+
+    font-family: inherit;
+    font-size: 28px;
+    font-weight: 600;
+
+    color: #ffffff;
+    background-color: #3976c5;
+
+    border: none;
+    border-radius: 10px;
+
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+button:hover {
+    background-color: #285c9e;
+}
+
+button:active {
+    background-color: #204a80;
+}
+
+button:focus-visible {
+    outline: 4px solid #bfdbfe;
+    outline-offset: 3px;
+}
+
+/* =======================
+   YES / NOボタン
+======================= */
+
+#yesButton,
+#noButton {
+    min-width: 180px;
+    min-height: 90px;
+
+    margin: 20px;
+    font-size: 36px;
+}
+
+/* =======================
+   問題表示
+======================= */
+
+#stimulus {
+    font-size: 100px;
+    font-weight: bold;
+
+    margin: 35px 0;
+    color: #172b4d;
+}
+
+/* =======================
+   課題ラベル
+======================= */
+
+#taskLabel {
+    font-size: 32px;
+    font-weight: 600;
+    color: #526579;
+}
+
+/* =======================
+   待機画面
+======================= */
+
+#waitLabel {
+    font-size: 56px;
+    font-weight: bold;
+    line-height: 1.5;
+    margin: 30px 0;
+}
+
+/* =======================
+   小さい画面への対応
+======================= */
+
+@media (max-width: 600px) {
+    #participantScreen,
+    #startScreen,
+    #questionScreen,
+    #waitScreen,
+    #finishScreen {
+        padding: 30px 15px;
+    }
+
+    h1 {
+        font-size: 30px;
+    }
+
+    p {
+        font-size: 21px;
+    }
+
+    #stimulus {
+        font-size: 80px;
+    }
+
+    #yesButton,
+    #noButton {
+        min-width: 120px;
+        margin: 8px;
+        font-size: 28px;
+    }
+
+    #waitLabel {
+        font-size: 38px;
+    }
 }
