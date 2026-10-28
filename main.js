@@ -1,6 +1,6 @@
 // =======================
- // 画面の取得
- // =======================
+// 画面の取得
+// =======================
 
 const participantScreen = document.getElementById("participantScreen");
 const participantIdInput = document.getElementById("participantId");
@@ -47,6 +47,13 @@ let questionActive = false;
 
 let results = [];
 
+// 自動保存用
+// 計算課題とは別の保存領域を使用する
+const STORAGE_KEY = "taskSwitchingExperiment_autosave_v1";
+
+let waitDeadline = null;
+let currentScreenName = "participant";
+
 
 // =======================
 // 実験条件
@@ -90,6 +97,18 @@ let waitInterval = null;
 
 function showScreen(screen) {
 
+    if (screen === participantScreen) {
+        currentScreenName = "participant";
+    } else if (screen === startScreen) {
+        currentScreenName = "start";
+    } else if (screen === questionScreen) {
+        currentScreenName = "question";
+    } else if (screen === waitScreen) {
+        currentScreenName = "wait";
+    } else if (screen === finishScreen) {
+        currentScreenName = "finish";
+    }
+
     const screens = [
         participantScreen,
         startScreen,
@@ -105,6 +124,191 @@ function showScreen(screen) {
     });
 
     screen.style.display = "block";
+}
+
+
+// =======================
+// 自動保存・再開
+// =======================
+
+// 現在の実験状態を保存する
+function saveProgress() {
+
+    try {
+
+        const state = {
+            participantId,
+            results,
+            conditions,
+            conditionIndex,
+            questionIndex,
+            basePhase,
+            blockQuestions,
+            currentTask,
+            currentStimulus,
+            currentAnswer,
+            questionActive,
+            currentScreenName,
+            waitDeadline,
+            savedAt: new Date().toISOString()
+        };
+
+        localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify(state)
+        );
+
+    } catch (error) {
+
+        console.error(
+            "実験データの自動保存に失敗しました。",
+            error
+        );
+
+    }
+
+}
+
+
+// 保存データを読み込む
+function getSavedProgress() {
+
+    try {
+
+        const saved = localStorage.getItem(STORAGE_KEY);
+
+        return saved ? JSON.parse(saved) : null;
+
+    } catch (error) {
+
+        console.error(
+            "保存データを読み込めませんでした。",
+            error
+        );
+
+        return null;
+
+    }
+
+}
+
+
+// 保存データを削除する
+function clearSavedProgress() {
+
+    localStorage.removeItem(STORAGE_KEY);
+
+}
+
+
+// 保存データから実験を再開する
+function restoreProgress(state) {
+
+    participantId = state.participantId || "";
+
+    results = Array.isArray(state.results)
+        ? state.results
+        : [];
+
+    conditions = Array.isArray(state.conditions)
+        ? state.conditions
+        : [];
+
+    conditionIndex = Number.isInteger(state.conditionIndex)
+        ? state.conditionIndex
+        : 0;
+
+    questionIndex = Number.isInteger(state.questionIndex)
+        ? state.questionIndex
+        : 0;
+
+    basePhase = state.basePhase !== false;
+
+    blockQuestions = Array.isArray(state.blockQuestions)
+        ? state.blockQuestions
+        : [];
+
+    currentTask = state.currentTask || "";
+
+    currentStimulus = state.currentStimulus ?? "";
+
+    currentAnswer = Boolean(state.currentAnswer);
+
+    // 再読み込み後は回答受付をいったん無効にする
+    questionActive = false;
+
+    waitDeadline = state.waitDeadline || null;
+
+    participantIdInput.value = participantId;
+
+
+    // 実験が終了していた場合
+    if (state.currentScreenName === "finish") {
+
+        showScreen(finishScreen);
+
+        downloadButton.style.display = "inline-block";
+
+        return;
+
+    }
+
+
+    // 待機中だった場合
+    if (
+        state.currentScreenName === "wait" &&
+        waitDeadline &&
+        conditions[conditionIndex]
+    ) {
+
+        const remainingMs = Math.max(
+            0,
+            waitDeadline - Date.now()
+        );
+
+        startWaitScreen(remainingMs);
+
+        return;
+
+    }
+
+
+    // 問題の途中だった場合
+    if (
+        state.currentScreenName === "question" &&
+        blockQuestions.length > 0 &&
+        questionIndex < blockQuestions.length
+    ) {
+
+        taskLabel.textContent =
+            currentTask === "NUMBER"
+                ? "奇数・偶数"
+                : "母音・子音";
+
+        stimulus.textContent = currentStimulus;
+
+        showScreen(questionScreen);
+
+        questionActive = true;
+
+        yesButton.disabled = false;
+        noButton.disabled = false;
+
+        // 再開後は反応時間を再計測する
+        startTime = performance.now();
+
+        saveProgress();
+
+        return;
+
+    }
+
+
+    // その他の場合は開始画面へ
+    showScreen(startScreen);
+
+    saveProgress();
+
 }
 
 
@@ -132,7 +336,9 @@ function generateConditions() {
     // 条件の順番をランダムにする
     for (let i = conditions.length - 1; i > 0; i--) {
 
-        const j = Math.floor(Math.random() * (i + 1));
+        const j = Math.floor(
+            Math.random() * (i + 1)
+        );
 
         [conditions[i], conditions[j]] =
             [conditions[j], conditions[i]];
@@ -152,7 +358,9 @@ function shuffleArray(array) {
 
     for (let i = shuffled.length - 1; i > 0; i--) {
 
-        const j = Math.floor(Math.random() * (i + 1));
+        const j = Math.floor(
+            Math.random() * (i + 1)
+        );
 
         [shuffled[i], shuffled[j]] =
             [shuffled[j], shuffled[i]];
@@ -160,6 +368,7 @@ function shuffleArray(array) {
     }
 
     return shuffled;
+
 }
 
 
@@ -177,7 +386,9 @@ function generateBlockQuestions() {
     ];
 
     const pattern =
-        patterns[Math.floor(Math.random() * patterns.length)];
+        patterns[
+            Math.floor(Math.random() * patterns.length)
+        ];
 
     blockQuestions = [];
 
@@ -208,6 +419,8 @@ function generateBlockQuestions() {
 
     questionIndex = 0;
 
+    saveProgress();
+
 }
 
 
@@ -226,6 +439,7 @@ function generateQuestion() {
     currentTask = question.task;
     currentAnswer = question.answerYes;
 
+
     // 数字課題
     if (currentTask === "NUMBER") {
 
@@ -238,19 +452,24 @@ function generateQuestion() {
 
             currentStimulus =
                 oddNumbers[
-                    Math.floor(Math.random() * oddNumbers.length)
+                    Math.floor(
+                        Math.random() * oddNumbers.length
+                    )
                 ];
 
         } else {
 
             currentStimulus =
                 evenNumbers[
-                    Math.floor(Math.random() * evenNumbers.length)
+                    Math.floor(
+                        Math.random() * evenNumbers.length
+                    )
                 ];
 
         }
 
     }
+
 
     // 文字課題
     else {
@@ -265,13 +484,19 @@ function generateQuestion() {
         if (currentAnswer) {
 
             currentStimulus =
-                vowels[Math.floor(Math.random() * vowels.length)];
+                vowels[
+                    Math.floor(
+                        Math.random() * vowels.length
+                    )
+                ];
 
         } else {
 
             currentStimulus =
                 consonants[
-                    Math.floor(Math.random() * consonants.length)
+                    Math.floor(
+                        Math.random() * consonants.length
+                    )
                 ];
 
         }
@@ -289,6 +514,8 @@ function generateQuestion() {
     // 反応時間の計測開始
     startTime = performance.now();
 
+    saveProgress();
+
 }
 
 
@@ -296,7 +523,7 @@ function generateQuestion() {
 // 待機画面
 // =======================
 
-function startWaitScreen() {
+function startWaitScreen(remainingMs = null) {
 
     questionActive = false;
 
@@ -305,22 +532,44 @@ function startWaitScreen() {
 
     // 前のタイマーが残っていた場合は解除
     if (waitTimeout !== null) {
+
         clearTimeout(waitTimeout);
+
         waitTimeout = null;
+
     }
 
     if (waitInterval !== null) {
+
         clearInterval(waitInterval);
+
         waitInterval = null;
+
     }
 
     // 現在の条件の待機時間と表示方法
     const currentCondition = conditions[conditionIndex];
 
+    if (!currentCondition) {
+        return;
+    }
+
     const waitTime = currentCondition.waitTime;
     const mode = currentCondition.mode;
 
+    const totalWaitMs = waitTime * 1000;
+
+    const actualRemainingMs =
+        remainingMs === null
+            ? totalWaitMs
+            : Math.max(0, remainingMs);
+
+    waitDeadline = Date.now() + actualRemainingMs;
+
     showScreen(waitScreen);
+
+    saveProgress();
+
 
     // 表示方法なし
     if (mode === "none") {
@@ -329,17 +578,17 @@ function startWaitScreen() {
 
     }
 
+
     // 残り時間表示
     else if (mode === "remaining") {
 
         const updateRemaining = () => {
 
-            const elapsedSeconds =
-                (performance.now() - waitStartTime) / 1000;
-
             const remain = Math.max(
                 0,
-                Math.ceil(waitTime - elapsedSeconds)
+                Math.ceil(
+                    (waitDeadline - Date.now()) / 1000
+                )
             );
 
             waitLabel.textContent =
@@ -347,23 +596,32 @@ function startWaitScreen() {
 
         };
 
-        var waitStartTime = performance.now();
-
         updateRemaining();
 
-        waitInterval = setInterval(updateRemaining, 100);
+        waitInterval = setInterval(
+            updateRemaining,
+            100
+        );
 
     }
+
 
     // 経過時間表示
     else if (mode === "elapsed") {
 
-        const waitStartTime = performance.now();
-
         const updateElapsed = () => {
 
-            const elapsedSeconds = Math.floor(
-                (performance.now() - waitStartTime) / 1000
+            const elapsedSeconds = Math.max(
+                0,
+                Math.floor(
+                    (
+                        totalWaitMs -
+                        Math.max(
+                            0,
+                            waitDeadline - Date.now()
+                        )
+                    ) / 1000
+                )
             );
 
             waitLabel.textContent =
@@ -375,19 +633,27 @@ function startWaitScreen() {
 
         updateElapsed();
 
-        waitInterval = setInterval(updateElapsed, 100);
+        waitInterval = setInterval(
+            updateElapsed,
+            100
+        );
 
     }
+
 
     // 待機終了後の処理
     waitTimeout = setTimeout(() => {
 
         if (waitInterval !== null) {
+
             clearInterval(waitInterval);
+
             waitInterval = null;
+
         }
 
         waitTimeout = null;
+        waitDeadline = null;
 
         // 次の4問を準備
         generateBlockQuestions();
@@ -396,7 +662,9 @@ function startWaitScreen() {
 
         generateQuestion();
 
-    }, waitTime * 1000);
+        saveProgress();
+
+    }, actualRemainingMs);
 
 }
 
@@ -427,10 +695,14 @@ function checkAnswer(userPressedYes) {
         basePhase ? "base" : "condition";
 
     const mode =
-        basePhase ? "none" : conditions[conditionIndex].mode;
+        basePhase
+            ? "none"
+            : conditions[conditionIndex].mode;
 
     const waitTime =
-        basePhase ? 0 : conditions[conditionIndex].waitTime;
+        basePhase
+            ? 0
+            : conditions[conditionIndex].waitTime;
 
     const previousQuestion =
         questionIndex > 0
@@ -441,6 +713,8 @@ function checkAnswer(userPressedYes) {
         previousQuestion !== null &&
         previousQuestion.task !== currentTask;
 
+
+    // 実験結果を記録
     results.push({
 
         participantId: participantId,
@@ -459,12 +733,17 @@ function checkAnswer(userPressedYes) {
 
         waitTime: waitTime,
 
-        condition: basePhase ? "base" : conditionIndex + 1,
+        condition:
+            basePhase
+                ? "base"
+                : conditionIndex + 1,
 
         questionNumber: questionIndex + 1,
 
         previousTask:
-            previousQuestion ? previousQuestion.task : "",
+            previousQuestion
+                ? previousQuestion.task
+                : "",
 
         taskSwitch: switchOccurred
 
@@ -472,7 +751,12 @@ function checkAnswer(userPressedYes) {
 
     console.log(results[results.length - 1]);
 
+    // 次の問題番号へ進む
     questionIndex++;
+
+    // 回答直後に自動保存
+    saveProgress();
+
 
     // =======================
     // 4問終了後
@@ -494,6 +778,7 @@ function checkAnswer(userPressedYes) {
 
         }
 
+
         // 最後の条件終了
         if (conditionIndex === conditions.length - 1) {
 
@@ -503,9 +788,12 @@ function checkAnswer(userPressedYes) {
 
             downloadButton.style.display = "inline-block";
 
+            saveProgress();
+
             return;
 
         }
+
 
         // 次の条件へ
         conditionIndex++;
@@ -515,6 +803,7 @@ function checkAnswer(userPressedYes) {
         return;
 
     }
+
 
     // 4問未満なら次の問題
     generateQuestion();
@@ -551,6 +840,7 @@ function downloadCSV() {
         "taskSwitch"
     ];
 
+
     // CSV内のカンマ・引用符・改行に対応
     function escapeCSV(value) {
 
@@ -560,22 +850,30 @@ function downloadCSV() {
 
     }
 
-    let csv = headers.map(escapeCSV).join(",") + "\r\n";
+
+    let csv =
+        headers.map(escapeCSV).join(",") + "\r\n";
+
 
     results.forEach(result => {
 
         const row = headers.map(header => {
+
             return escapeCSV(result[header]);
+
         });
 
         csv += row.join(",") + "\r\n";
 
     });
 
+
     // Excelで日本語が文字化けしにくいようBOMを付ける
     const blob = new Blob(
         ["\uFEFF" + csv],
-        { type: "text/csv;charset=utf-8;" }
+        {
+            type: "text/csv;charset=utf-8;"
+        }
     );
 
     const url = URL.createObjectURL(blob);
@@ -585,7 +883,7 @@ function downloadCSV() {
     a.href = url;
 
     a.download =
-        "experiment_result_" +
+        "task_switching_result_" +
         participantId.replace(/[\\/:*?"<>|]/g, "_") +
         ".csv";
 
@@ -596,7 +894,9 @@ function downloadCSV() {
     a.remove();
 
     setTimeout(() => {
+
         URL.revokeObjectURL(url);
+
     }, 1000);
 
 }
@@ -621,6 +921,8 @@ participantNextButton.addEventListener("click", () => {
 
     showScreen(startScreen);
 
+    saveProgress();
+
 });
 
 
@@ -629,6 +931,11 @@ participantNextButton.addEventListener("click", () => {
 // =======================
 
 startButton.addEventListener("click", () => {
+
+    // 新しく開始する場合は以前の保存データを消す
+    clearSavedProgress();
+
+    waitDeadline = null;
 
     // 結果を初期化
     results = [];
@@ -648,6 +955,8 @@ startButton.addEventListener("click", () => {
 
     generateQuestion();
 
+    saveProgress();
+
 });
 
 
@@ -664,6 +973,47 @@ yesButton.addEventListener("click", () => {
 noButton.addEventListener("click", () => {
 
     checkAnswer(false);
+
+});
+
+
+// =======================
+// 起動時に保存データがあれば再開を確認
+// =======================
+
+window.addEventListener("load", () => {
+
+    const saved = getSavedProgress();
+
+    if (
+        !saved ||
+        !saved.participantId ||
+        !Array.isArray(saved.results)
+    ) {
+
+        return;
+
+    }
+
+    const shouldResume = confirm(
+        "前回のタスクスイッチング実験の保存データがあります。\n" +
+        "参加者番号：" + saved.participantId + "\n" +
+        "保存済み回答数：" + saved.results.length + "問\n\n" +
+        "OK：続きから再開する\n" +
+        "キャンセル：保存データを削除して新しく開始する"
+    );
+
+    if (shouldResume) {
+
+        restoreProgress(saved);
+
+    } else {
+
+        clearSavedProgress();
+
+        showScreen(participantScreen);
+
+    }
 
 });
 
