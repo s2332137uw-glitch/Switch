@@ -86,6 +86,9 @@ let basePhase = true;
 // 現在の4問分の問題リスト
 let blockQuestions = [];
 
+// 直前に実施した課題
+let previousTask = null;
+
 // 待機タイマー
 let waitTimeout = null;
 let waitInterval = null;
@@ -143,8 +146,9 @@ function saveProgress() {
             conditionIndex,
             questionIndex,
             basePhase,
-            blockQuestions,
-            currentTask,
+blockQuestions,
+previousTask,
+currentTask,
             currentStimulus,
             currentAnswer,
             questionActive,
@@ -225,9 +229,10 @@ function restoreProgress(state) {
     basePhase = state.basePhase !== false;
 
     blockQuestions = Array.isArray(state.blockQuestions)
-        ? state.blockQuestions
-        : [];
+    ? state.blockQuestions
+    : [];
 
+previousTask = state.previousTask ?? null;
     currentTask = state.currentTask || "";
 
     currentStimulus = state.currentStimulus ?? "";
@@ -704,14 +709,12 @@ function checkAnswer(userPressedYes) {
             ? 0
             : conditions[conditionIndex].waitTime;
 
-    const previousQuestion =
-        questionIndex > 0
-            ? blockQuestions[questionIndex - 1]
-            : null;
+    // 直前の課題と今回の課題を比較
+const previousTaskForResult = previousTask;
 
-    const switchOccurred =
-        previousQuestion !== null &&
-        previousQuestion.task !== currentTask;
+const switchOccurred =
+    previousTaskForResult !== null &&
+    previousTaskForResult !== currentTask;
 
 
     // 実験結果を記録
@@ -724,6 +727,8 @@ function checkAnswer(userPressedYes) {
         task: currentTask,
 
         stimulus: currentStimulus,
+
+        response: userPressedYes ? "YES" : "NO",
 
         correct: correct,
 
@@ -740,15 +745,13 @@ function checkAnswer(userPressedYes) {
 
         questionNumber: questionIndex + 1,
 
-        previousTask:
-            previousQuestion
-                ? previousQuestion.task
-                : "",
+        previousTask: previousTaskForResult,
 
         taskSwitch: switchOccurred
 
     });
 
+    previousTask = currentTask;
     console.log(results[results.length - 1]);
 
     // 次の問題番号へ進む
@@ -826,19 +829,20 @@ function downloadCSV() {
     }
 
     const headers = [
-        "participantId",
-        "phase",
-        "task",
-        "stimulus",
-        "correct",
-        "reactionTime",
-        "mode",
-        "waitTime",
-        "condition",
-        "questionNumber",
-        "previousTask",
-        "taskSwitch"
-    ];
+    "participantId",
+    "phase",
+    "task",
+    "stimulus",
+    "response",       // 追加
+    "correct",
+    "reactionTime",
+    "mode",
+    "waitTime",
+    "condition",
+    "questionNumber",
+    "previousTask",
+    "taskSwitch"
+];
 
 
     // CSV内のカンマ・引用符・改行に対応
@@ -944,9 +948,10 @@ startButton.addEventListener("click", () => {
     questionIndex = 0;
 
     basePhase = true;
-    questionActive = false;
+questionActive = false;
+previousTask = null;
 
-    generateConditions();
+generateConditions();
 
     // ベース課題の4問を準備
     generateBlockQuestions();
