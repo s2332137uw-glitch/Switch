@@ -1,3 +1,4 @@
+
 // =======================
 // 画面の取得
 // =======================
@@ -47,9 +48,7 @@ let questionActive = false;
 
 let results = [];
 
-// 自動保存用
-// 計算課題とは別の保存領域を使用する
-const STORAGE_KEY = "taskSwitchingExperiment_autosave_v1";
+const STORAGE_KEY = "taskSwitchingExperiment_autosave_v2";
 
 let waitDeadline = null;
 let currentScreenName = "participant";
@@ -79,17 +78,11 @@ let conditions = [];
 let conditionIndex = 0;
 let questionIndex = 0;
 
-// true：ベース課題
-// false：条件課題
 let basePhase = true;
-
-// 現在の4問分の問題リスト
 let blockQuestions = [];
-
-// 直前に実施した課題
+let currentSetNumber = null;
 let previousTask = null;
 
-// 待機タイマー
 let waitTimeout = null;
 let waitInterval = null;
 
@@ -134,7 +127,6 @@ function showScreen(screen) {
 // 自動保存・再開
 // =======================
 
-// 現在の実験状態を保存する
 function saveProgress() {
 
     try {
@@ -146,9 +138,10 @@ function saveProgress() {
             conditionIndex,
             questionIndex,
             basePhase,
-blockQuestions,
-previousTask,
-currentTask,
+            blockQuestions,
+            currentSetNumber,
+            previousTask,
+            currentTask,
             currentStimulus,
             currentAnswer,
             questionActive,
@@ -174,7 +167,6 @@ currentTask,
 }
 
 
-// 保存データを読み込む
 function getSavedProgress() {
 
     try {
@@ -197,7 +189,6 @@ function getSavedProgress() {
 }
 
 
-// 保存データを削除する
 function clearSavedProgress() {
 
     localStorage.removeItem(STORAGE_KEY);
@@ -205,7 +196,6 @@ function clearSavedProgress() {
 }
 
 
-// 保存データから実験を再開する
 function restoreProgress(state) {
 
     participantId = state.participantId || "";
@@ -229,37 +219,29 @@ function restoreProgress(state) {
     basePhase = state.basePhase !== false;
 
     blockQuestions = Array.isArray(state.blockQuestions)
-    ? state.blockQuestions
-    : [];
+        ? state.blockQuestions
+        : [];
 
-previousTask = state.previousTask ?? null;
+    currentSetNumber = state.currentSetNumber ?? null;
+
+    previousTask = state.previousTask ?? null;
     currentTask = state.currentTask || "";
-
     currentStimulus = state.currentStimulus ?? "";
-
     currentAnswer = Boolean(state.currentAnswer);
 
-    // 再読み込み後は回答受付をいったん無効にする
     questionActive = false;
-
     waitDeadline = state.waitDeadline || null;
 
     participantIdInput.value = participantId;
 
-
-    // 実験が終了していた場合
     if (state.currentScreenName === "finish") {
 
         showScreen(finishScreen);
-
         downloadButton.style.display = "inline-block";
-
         return;
 
     }
 
-
-    // 待機中だった場合
     if (
         state.currentScreenName === "wait" &&
         waitDeadline &&
@@ -272,13 +254,10 @@ previousTask = state.previousTask ?? null;
         );
 
         startWaitScreen(remainingMs);
-
         return;
 
     }
 
-
-    // 問題の途中だった場合
     if (
         state.currentScreenName === "question" &&
         blockQuestions.length > 0 &&
@@ -299,19 +278,14 @@ previousTask = state.previousTask ?? null;
         yesButton.disabled = false;
         noButton.disabled = false;
 
-        // 再開後は反応時間を再計測する
         startTime = performance.now();
 
         saveProgress();
-
         return;
 
     }
 
-
-    // その他の場合は開始画面へ
     showScreen(startScreen);
-
     saveProgress();
 
 }
@@ -325,11 +299,14 @@ function generateConditions() {
 
     conditions = [];
 
+    let id = 1;
+
     for (const mode of modes) {
 
         for (const time of waitTimes) {
 
             conditions.push({
+                id: id++,
                 mode: mode,
                 waitTime: time
             });
@@ -338,17 +315,7 @@ function generateConditions() {
 
     }
 
-    // 条件の順番をランダムにする
-    for (let i = conditions.length - 1; i > 0; i--) {
-
-        const j = Math.floor(
-            Math.random() * (i + 1)
-        );
-
-        [conditions[i], conditions[j]] =
-            [conditions[j], conditions[i]];
-
-    }
+    conditions = shuffleArray(conditions);
 
 }
 
@@ -378,47 +345,272 @@ function shuffleArray(array) {
 
 
 // =======================
-// 4問分の問題を作成
+// 15セットの固定問題
 // =======================
 
-function generateBlockQuestions() {
+// 各セットの構成
+// ・数字課題2問、文字課題2問
+// ・YES2問、NO2問
+// ・課題の切り替え2回
 
-    // 数字2問・文字2問。
-    // どちらも切り替え回数が2回になる並び。
-    const patterns = [
-        ["NUMBER", "LETTER", "LETTER", "NUMBER"],
-        ["LETTER", "NUMBER", "NUMBER", "LETTER"]
-    ];
+const taskSwitchingSets = [
 
-    const pattern =
-        patterns[
-            Math.floor(Math.random() * patterns.length)
+    [
+        { task: "NUMBER", stimulus: "7", answerYes: true },
+        { task: "LETTER", stimulus: "B", answerYes: false },
+        { task: "LETTER", stimulus: "A", answerYes: true },
+        { task: "NUMBER", stimulus: "4", answerYes: false }
+    ],
+
+    [
+        { task: "LETTER", stimulus: "E", answerYes: true },
+        { task: "NUMBER", stimulus: "8", answerYes: false },
+        { task: "NUMBER", stimulus: "3", answerYes: true },
+        { task: "LETTER", stimulus: "K", answerYes: false }
+    ],
+
+    [
+        { task: "NUMBER", stimulus: "5", answerYes: true },
+        { task: "LETTER", stimulus: "D", answerYes: false },
+        { task: "LETTER", stimulus: "U", answerYes: true },
+        { task: "NUMBER", stimulus: "6", answerYes: false }
+    ],
+
+    [
+        { task: "LETTER", stimulus: "M", answerYes: false },
+        { task: "NUMBER", stimulus: "9", answerYes: true },
+        { task: "NUMBER", stimulus: "2", answerYes: false },
+        { task: "LETTER", stimulus: "I", answerYes: true }
+    ],
+
+    [
+        { task: "NUMBER", stimulus: "1", answerYes: true },
+        { task: "LETTER", stimulus: "F", answerYes: false },
+        { task: "LETTER", stimulus: "O", answerYes: true },
+        { task: "NUMBER", stimulus: "6", answerYes: false }
+    ],
+
+    [
+        { task: "LETTER", stimulus: "C", answerYes: false },
+        { task: "NUMBER", stimulus: "8", answerYes: false },
+        { task: "NUMBER", stimulus: "3", answerYes: true },
+        { task: "LETTER", stimulus: "A", answerYes: true }
+    ],
+
+    [
+        { task: "NUMBER", stimulus: "2", answerYes: false },
+        { task: "LETTER", stimulus: "E", answerYes: true },
+        { task: "LETTER", stimulus: "T", answerYes: false },
+        { task: "NUMBER", stimulus: "5", answerYes: true }
+    ],
+
+    [
+        { task: "LETTER", stimulus: "I", answerYes: true },
+        { task: "NUMBER", stimulus: "4", answerYes: false },
+        { task: "NUMBER", stimulus: "7", answerYes: true },
+        { task: "LETTER", stimulus: "G", answerYes: false }
+    ],
+
+    [
+        { task: "NUMBER", stimulus: "9", answerYes: true },
+        { task: "LETTER", stimulus: "P", answerYes: false },
+        { task: "LETTER", stimulus: "U", answerYes: true },
+        { task: "NUMBER", stimulus: "2", answerYes: false }
+    ],
+
+    [
+        { task: "LETTER", stimulus: "H", answerYes: false },
+        { task: "NUMBER", stimulus: "1", answerYes: true },
+        { task: "NUMBER", stimulus: "8", answerYes: false },
+        { task: "LETTER", stimulus: "O", answerYes: true }
+    ],
+
+    [
+        { task: "NUMBER", stimulus: "3", answerYes: true },
+        { task: "LETTER", stimulus: "L", answerYes: false },
+        { task: "LETTER", stimulus: "E", answerYes: true },
+        { task: "NUMBER", stimulus: "6", answerYes: false }
+    ],
+
+    [
+        { task: "LETTER", stimulus: "A", answerYes: true },
+        { task: "NUMBER", stimulus: "8", answerYes: false },
+        { task: "NUMBER", stimulus: "5", answerYes: true },
+        { task: "LETTER", stimulus: "R", answerYes: false }
+    ],
+
+    [
+        { task: "NUMBER", stimulus: "4", answerYes: false },
+        { task: "LETTER", stimulus: "S", answerYes: false },
+        { task: "LETTER", stimulus: "U", answerYes: true },
+        { task: "NUMBER", stimulus: "7", answerYes: true }
+    ],
+
+    [
+        { task: "LETTER", stimulus: "N", answerYes: false },
+        { task: "NUMBER", stimulus: "3", answerYes: true },
+        { task: "NUMBER", stimulus: "8", answerYes: false },
+        { task: "LETTER", stimulus: "I", answerYes: true }
+    ],
+
+    [
+        { task: "NUMBER", stimulus: "5", answerYes: true },
+        { task: "LETTER", stimulus: "B", answerYes: false },
+        { task: "LETTER", stimulus: "A", answerYes: true },
+        { task: "NUMBER", stimulus: "2", answerYes: false }
+    ]
+
+];
+
+
+// =======================
+// 問題セットの構成チェック
+// =======================
+
+function validateTaskSwitchingSets() {
+
+    if (taskSwitchingSets.length !== 15) {
+        throw new Error("問題セットは15セット必要です。");
+    }
+
+    taskSwitchingSets.forEach((set, index) => {
+
+        const numberCount =
+            set.filter(q => q.task === "NUMBER").length;
+
+        const letterCount =
+            set.filter(q => q.task === "LETTER").length;
+
+        const yesCount =
+            set.filter(q => q.answerYes === true).length;
+
+        const noCount =
+            set.filter(q => q.answerYes === false).length;
+
+        const switchCount =
+            set.slice(1).filter(
+                (q, i) => q.task !== set[i].task
+            ).length;
+
+        if (
+            set.length !== 4 ||
+            numberCount !== 2 ||
+            letterCount !== 2 ||
+            yesCount !== 2 ||
+            noCount !== 2 ||
+            switchCount !== 2
+        ) {
+
+            throw new Error(
+                `問題セット${index + 1}の構成が条件を満たしていません。`
+            );
+
+        }
+
+        set.forEach((q, questionIndex) => {
+
+            const stimulusText = String(q.stimulus);
+
+            const actualYes =
+                q.task === "NUMBER"
+                    ? Number(stimulusText) % 2 === 1
+                    : "AEIOU".includes(stimulusText);
+
+            if (actualYes !== q.answerYes) {
+
+                throw new Error(
+                    `問題セット${index + 1}の${questionIndex + 1}問目の正答設定が誤っています。`
+                );
+
+            }
+
+        });
+
+    });
+
+}
+
+validateTaskSwitchingSets();
+
+
+// =======================
+// 問題セットの割り当て
+// =======================
+
+// 参加者1：条件1→セット1、条件2→セット2 ...
+// 参加者2：条件1→セット15、条件2→セット1 ...
+// 参加者3：条件1→セット14、条件2→セット15 ...
+
+function getAssignedSetIndex(conditionArrayIndex) {
+
+    const participantNumber = Number(participantId);
+
+    const offset = (participantNumber - 1) % 15;
+
+    const conditionNumber =
+        conditions[conditionArrayIndex].id - 1;
+
+    return (
+        conditionNumber - offset + 15
+    ) % 15;
+
+}
+
+
+// =======================
+// 4問分の問題を準備
+// =======================
+
+function generateBlockQuestions(setIndex = null) {
+
+    // ベース課題はランダム生成
+    if (setIndex === null) {
+
+        const patterns = [
+            ["NUMBER", "LETTER", "LETTER", "NUMBER"],
+            ["LETTER", "NUMBER", "NUMBER", "LETTER"]
         ];
 
-    blockQuestions = [];
+        const pattern =
+            patterns[Math.floor(Math.random() * patterns.length)];
 
-    // 各課題についてYESとNOを1問ずつ用意
-    const answersByTask = {
-        NUMBER: shuffleArray([true, false]),
-        LETTER: shuffleArray([true, false])
-    };
+        blockQuestions = [];
 
-    const taskCounters = {
-        NUMBER: 0,
-        LETTER: 0
-    };
+        const answersByTask = {
+            NUMBER: shuffleArray([true, false]),
+            LETTER: shuffleArray([true, false])
+        };
 
-    for (const task of pattern) {
+        const taskCounters = {
+            NUMBER: 0,
+            LETTER: 0
+        };
 
-        const answerYes =
-            answersByTask[task][taskCounters[task]];
+        for (const task of pattern) {
 
-        taskCounters[task]++;
+            const answerYes =
+                answersByTask[task][taskCounters[task]];
 
-        blockQuestions.push({
-            task: task,
-            answerYes: answerYes
-        });
+            taskCounters[task]++;
+
+            blockQuestions.push({
+                task: task,
+                answerYes: answerYes
+            });
+
+        }
+
+        currentSetNumber = null;
+
+    } else {
+
+        // 条件課題は固定セットを使用
+        blockQuestions =
+            taskSwitchingSets[setIndex].map(
+                question => ({ ...question })
+            );
+
+        currentSetNumber = setIndex + 1;
 
     }
 
@@ -444,79 +636,50 @@ function generateQuestion() {
     currentTask = question.task;
     currentAnswer = question.answerYes;
 
+    taskLabel.textContent =
+        currentTask === "NUMBER"
+            ? "奇数・偶数"
+            : "母音・子音";
 
-    // 数字課題
-    if (currentTask === "NUMBER") {
+    // 条件課題では固定刺激を使用
+    if (question.stimulus !== undefined) {
 
-        taskLabel.textContent = "奇数・偶数";
-
-        const oddNumbers = [1, 3, 5, 7, 9];
-        const evenNumbers = [2, 4, 6, 8];
-
-        if (currentAnswer) {
-
-            currentStimulus =
-                oddNumbers[
-                    Math.floor(
-                        Math.random() * oddNumbers.length
-                    )
-                ];
-
-        } else {
-
-            currentStimulus =
-                evenNumbers[
-                    Math.floor(
-                        Math.random() * evenNumbers.length
-                    )
-                ];
-
-        }
+        currentStimulus = question.stimulus;
 
     }
 
+    // ベース課題の数字
+    else if (currentTask === "NUMBER") {
 
-    // 文字課題
+        const numbers = currentAnswer
+            ? [1, 3, 5, 7, 9]
+            : [2, 4, 6, 8];
+
+        currentStimulus = String(
+            numbers[Math.floor(Math.random() * numbers.length)]
+        );
+
+    }
+
+    // ベース課題のアルファベット
     else {
 
-        taskLabel.textContent = "母音・子音";
+        const letters = currentAnswer
+            ? ["A", "E", "I", "O", "U"]
+            : "BCDFGHJKLMNPQRSTVWXYZ".split("");
 
-        const vowels = ["A", "E", "I", "O", "U"];
-
-        const consonants =
-            "BCDFGHJKLMNPQRSTVWXYZ".split("");
-
-        if (currentAnswer) {
-
-            currentStimulus =
-                vowels[
-                    Math.floor(
-                        Math.random() * vowels.length
-                    )
-                ];
-
-        } else {
-
-            currentStimulus =
-                consonants[
-                    Math.floor(
-                        Math.random() * consonants.length
-                    )
-                ];
-
-        }
+        currentStimulus =
+            letters[Math.floor(Math.random() * letters.length)];
 
     }
 
     stimulus.textContent = currentStimulus;
 
-    // 回答受付開始
     questionActive = true;
 
     yesButton.disabled = false;
     noButton.disabled = false;
 
-    // 反応時間の計測開始
     startTime = performance.now();
 
     saveProgress();
@@ -539,7 +702,6 @@ function startWaitScreen(remainingMs = null) {
     if (waitTimeout !== null) {
 
         clearTimeout(waitTimeout);
-
         waitTimeout = null;
 
     }
@@ -547,12 +709,11 @@ function startWaitScreen(remainingMs = null) {
     if (waitInterval !== null) {
 
         clearInterval(waitInterval);
-
         waitInterval = null;
 
     }
 
-    // 現在の条件の待機時間と表示方法
+    // 現在の条件を取得
     const currentCondition = conditions[conditionIndex];
 
     if (!currentCondition) {
@@ -576,7 +737,10 @@ function startWaitScreen(remainingMs = null) {
     saveProgress();
 
 
+    // =======================
     // 表示方法なし
+    // =======================
+
     if (mode === "none") {
 
         waitLabel.textContent = "お待ちください";
@@ -584,7 +748,10 @@ function startWaitScreen(remainingMs = null) {
     }
 
 
+    // =======================
     // 残り時間表示
+    // =======================
+
     else if (mode === "remaining") {
 
         const updateRemaining = () => {
@@ -611,7 +778,10 @@ function startWaitScreen(remainingMs = null) {
     }
 
 
+    // =======================
     // 経過時間表示
+    // =======================
+
     else if (mode === "elapsed") {
 
         const updateElapsed = () => {
@@ -646,13 +816,15 @@ function startWaitScreen(remainingMs = null) {
     }
 
 
+    // =======================
     // 待機終了後の処理
+    // =======================
+
     waitTimeout = setTimeout(() => {
 
         if (waitInterval !== null) {
 
             clearInterval(waitInterval);
-
             waitInterval = null;
 
         }
@@ -660,8 +832,11 @@ function startWaitScreen(remainingMs = null) {
         waitTimeout = null;
         waitDeadline = null;
 
-        // 次の4問を準備
-        generateBlockQuestions();
+        // 現在の条件に対応する問題セットを取得
+        const setIndex =
+            getAssignedSetIndex(conditionIndex);
+
+        generateBlockQuestions(setIndex);
 
         showScreen(questionScreen);
 
@@ -709,12 +884,13 @@ function checkAnswer(userPressedYes) {
             ? 0
             : conditions[conditionIndex].waitTime;
 
-    // 直前の課題と今回の課題を比較
-const previousTaskForResult = previousTask;
 
-const switchOccurred =
-    previousTaskForResult !== null &&
-    previousTaskForResult !== currentTask;
+    // 直前の課題と今回の課題を比較
+    const previousTaskForResult = previousTask;
+
+    const switchOccurred =
+        previousTaskForResult !== null &&
+        previousTaskForResult !== currentTask;
 
 
     // 実験結果を記録
@@ -741,7 +917,17 @@ const switchOccurred =
         condition:
             basePhase
                 ? "base"
+                : conditions[conditionIndex].id,
+
+        conditionOrder:
+            basePhase
+                ? "base"
                 : conditionIndex + 1,
+
+        setNumber:
+            basePhase
+                ? "base"
+                : currentSetNumber,
 
         questionNumber: questionIndex + 1,
 
@@ -752,6 +938,7 @@ const switchOccurred =
     });
 
     previousTask = currentTask;
+
     console.log(results[results.length - 1]);
 
     // 次の問題番号へ進む
@@ -774,7 +961,6 @@ const switchOccurred =
 
             conditionIndex = 0;
 
-            // 条件1の待機を開始
             startWaitScreen();
 
             return;
@@ -829,20 +1015,22 @@ function downloadCSV() {
     }
 
     const headers = [
-    "participantId",
-    "phase",
-    "task",
-    "stimulus",
-    "response",       // 追加
-    "correct",
-    "reactionTime",
-    "mode",
-    "waitTime",
-    "condition",
-    "questionNumber",
-    "previousTask",
-    "taskSwitch"
-];
+        "participantId",
+        "phase",
+        "task",
+        "stimulus",
+        "response",
+        "correct",
+        "reactionTime",
+        "mode",
+        "waitTime",
+        "condition",
+        "conditionOrder",
+        "setNumber",
+        "questionNumber",
+        "previousTask",
+        "taskSwitch"
+    ];
 
 
     // CSV内のカンマ・引用符・改行に対応
@@ -915,9 +1103,12 @@ participantNextButton.addEventListener("click", () => {
     participantId =
         participantIdInput.value.trim();
 
-    if (participantId === "") {
+    if (
+        !/^\d+$/.test(participantId) ||
+        Number(participantId) < 1
+    ) {
 
-        alert("参加者番号を入力してください。");
+        alert("参加者番号は1以上の整数で入力してください。");
 
         return;
 
@@ -941,6 +1132,16 @@ startButton.addEventListener("click", () => {
 
     waitDeadline = null;
 
+    if (waitTimeout !== null) {
+        clearTimeout(waitTimeout);
+        waitTimeout = null;
+    }
+
+    if (waitInterval !== null) {
+        clearInterval(waitInterval);
+        waitInterval = null;
+    }
+
     // 結果を初期化
     results = [];
 
@@ -948,10 +1149,12 @@ startButton.addEventListener("click", () => {
     questionIndex = 0;
 
     basePhase = true;
-questionActive = false;
-previousTask = null;
+    questionActive = false;
+    previousTask = null;
+    currentSetNumber = null;
 
-generateConditions();
+    // 条件を生成して順番をシャッフル
+    generateConditions();
 
     // ベース課題の4問を準備
     generateBlockQuestions();
@@ -1004,8 +1207,7 @@ window.addEventListener("load", () => {
         "前回のタスクスイッチング実験の保存データがあります。\n" +
         "参加者番号：" + saved.participantId + "\n" +
         "保存済み回答数：" + saved.results.length + "問\n\n" +
-        "OK：続きから再開する\n" +
-        "キャンセル：保存データを削除して新しく開始する"
+        "OK：続きから再開する\nキャンセル：保存データを削除して新しく開始する"
     );
 
     if (shouldResume) {
@@ -1032,3 +1234,4 @@ downloadButton.addEventListener("click", () => {
     downloadCSV();
 
 });
+
