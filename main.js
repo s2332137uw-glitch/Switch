@@ -547,11 +547,8 @@ function getAssignedSetIndex(conditionArrayIndex) {
 
     const offset = (participantNumber - 1) % 15;
 
-    const conditionNumber =
-        conditions[conditionArrayIndex].id - 1;
-
     return (
-        conditionNumber - offset + 15
+        conditionArrayIndex - offset + 15
     ) % 15;
 
 }
