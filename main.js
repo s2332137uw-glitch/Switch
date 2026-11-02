@@ -559,7 +559,7 @@ function getAssignedSetIndex(conditionArrayIndex) {
 // =======================
 
 function generateBlockQuestions(setIndex = null) {
-
+ previousTask = null;
     // ベース課題はランダム生成
     if (setIndex === null) {
 
