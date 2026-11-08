@@ -1,42 +1,24 @@
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
     <meta charset="UTF-8">
     <title>Task Switching Experiment</title>
-
-    <!-- CSSを読み込む -->
     <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
     <!-- 参加者番号入力画面 -->
     <div id="participantScreen">
-
         <h1>Task Switching課題</h1>
-
         <p>参加者番号を入力してください。</p>
-
-        <input
-            type="text"
-            id="participantId"
-            placeholder="参加者番号"
-        >
-
+        <input type="text" id="participantId" placeholder="参加者番号">
         <br>
-
         <button id="participantNextButton">次へ</button>
-
     </div>
 
-
-    <!-- 課題説明画面 -->
+    <!-- 実験開始画面 -->
     <div id="startScreen" style="display:none;">
-
         <h1>Task Switching課題</h1>
-
-        <p>画面に表示される判断ルールに従って、数字を判断してください。</p>
 
         <h3>判断ルール</h3>
 
@@ -50,48 +32,29 @@
 
         <br>
 
-        <p>数字が表示されたら、当てはまる回答ボタンを押してください。</p>
-
         <button id="startButton">実験開始</button>
-
     </div>
-
 
     <!-- 問題画面 -->
     <div id="questionScreen" style="display:none;">
-
         <h2 id="taskLabel">奇数・偶数</h2>
-
         <h1 id="stimulus">7</h1>
 
         <button id="yesButton">YES</button>
         <button id="noButton">NO</button>
-
     </div>
-
 
     <!-- 待機画面 -->
     <div id="waitScreen" style="display:none;">
-
         <h1 id="waitLabel">お待ちください</h1>
-
     </div>
-
 
     <!-- 実験終了画面 -->
     <div id="finishScreen" style="display:none;">
-
         <h1>実験終了</h1>
-
-        <button id="downloadButton">
-            結果を保存
-        </button>
-
+        <button id="downloadButton">結果を保存</button>
     </div>
 
-
     <script src="main.js"></script>
-
 </body>
-
 </html>
